@@ -2,6 +2,7 @@
 const assets = window.MASCOT_ASSETS || [];
 const $ = (selector) => document.querySelector(selector);
 const state = {category:'All',format:'all',query:'',selected:null,playing:false};
+let scrollMotion;
 const categories = ['All','Feelings','Gestures','Wins','Social','Sports'];
 const aliases = {'bulls-eye':'bullseye bulls eye target archery','thumbs-up':'thumbsup thumsup approval','tongue-out':'tounge silly','victory-fingers':'peace v sign victory','heart-eyes':'love hearts','laughing-tears':'lol laugh laughter','yogasan-tree':'yoga balance','yogasan-seated':'yoga meditation','athletics':'running jogging','weightlifting':'weight lifting gym','champion':'trophy winner','double-fist':'cheer celebration'};
 function element(tag,className,text){const el=document.createElement(tag);if(className)el.className=className;if(text!==undefined)el.textContent=text;return el;}
@@ -20,7 +21,9 @@ function card(asset){
 function render(){
   const query=state.query.trim().toLowerCase();
   const filtered=assets.filter(a=>(state.category==='All'||a.category===state.category)&&(state.format!=='gif'||a.gif)&&(!query||`${a.title} ${a.category} ${aliases[a.id]||''}`.toLowerCase().includes(query)));
+  scrollMotion?.removeCards();
   $('#grid').replaceChildren(...filtered.map(card));
+  scrollMotion?.observeCards();
   $('#empty').hidden=filtered.length>0;
   $('#result-count').textContent=`${filtered.length} ${filtered.length===1?'mascot moment':'mascot moments'}${state.category==='All'?'':' · '+state.category}${state.format==='gif'?' · animated GIFs':state.format==='sticker'?' · stickers':''}`;
   $('#clear-search').hidden=!state.query;
@@ -49,4 +52,48 @@ $('#clear-search').addEventListener('click',()=>{state.query='';$('#search').val
 document.querySelectorAll('input[name=format]').forEach(input=>input.addEventListener('change',()=>{state.format=input.value;render();}));
 $('#reset').addEventListener('click',()=>{Object.assign(state,{category:'All',format:'all',query:''});$('#search').value='';$('input[value=all]').checked=true;render();$('#search').focus();});
 $('#sticker-count').textContent=assets.length;$('#gif-count').textContent=assets.filter(a=>a.gif).length;
+// Animate only while entering the viewport; content stays readable without JS.
+function createScrollMotion(){
+  const preference=window.matchMedia('(prefers-reduced-motion: reduce)');
+  const fixed=[...document.querySelectorAll('.hero-copy,.hero-art,.section-head,.steps article,.save-section details,footer')];
+  let observer;
+  let previousScroll=window.scrollY;
+  const visible=new WeakSet();
+  const animations=new Map();
+  function observeCards(){
+    document.querySelectorAll('.card').forEach(el=>observer?.observe(el));
+  }
+  function removeCards(){
+    document.querySelectorAll('.card').forEach(el=>{observer?.unobserve(el);animations.get(el)?.cancel();animations.delete(el);visible.delete(el);});
+  }
+  function configure(){
+    observer?.disconnect();observer=null;
+    animations.forEach(animation=>animation.cancel());animations.clear();
+    if(preference.matches||!('IntersectionObserver' in window)||!Element.prototype.animate)return;
+    observer=new IntersectionObserver(entries=>{
+      const direction=window.scrollY<previousScroll?-1:1;previousScroll=window.scrollY;
+      for(const entry of entries){
+        const el=entry.target;
+        if(!entry.isIntersecting){visible.delete(el);continue;}
+        if(visible.has(el))continue;
+        visible.add(el);
+        if(el.contains(document.activeElement))continue;
+        animations.get(el)?.cancel();
+        const animation=el.animate([
+          {opacity:0,transform:`translateY(${direction*18}px)`},
+          {opacity:1,transform:'translateY(0)'}
+        ],{duration:520,easing:'cubic-bezier(.2,.8,.2,1)'});
+        animations.set(el,animation);
+        animation.onfinish=()=>{if(animations.get(el)===animation)animations.delete(el);};
+      }
+    },{threshold:0,rootMargin:'0px 0px -16px 0px'});
+    fixed.forEach(el=>{visible.delete(el);observer.observe(el);});observeCards();
+  }
+  document.addEventListener('focusin',event=>{
+    for(const [el,animation] of animations){if(el.contains(event.target))animation.finish();}
+  });
+  preference.addEventListener('change',configure);configure();
+  return {observeCards,removeCards};
+}
+scrollMotion=createScrollMotion();
 render();
