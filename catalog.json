@@ -48,14 +48,6 @@
     "gif": "assets/gifs/shocked.gif"
   },
   {
-    "id": "worried",
-    "title": "Worried",
-    "category": "Feelings",
-    "sticker": "assets/stickers/worried.png",
-    "thumb": "assets/thumbs/worried.png",
-    "gif": "assets/gifs/worried.gif"
-  },
-  {
     "id": "wink",
     "title": "Wink",
     "category": "Gestures",

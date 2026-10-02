@@ -1,6 +1,6 @@
 # Khel Mahakumbh Mascot Club
 
-A public, mobile-friendly library of 44 mascot stickers and 35 animated GIFs, covering reactions, gestures, celebrations and ten sports.
+A public, mobile-friendly library of 43 mascot stickers and 34 animated GIFs, covering reactions, gestures, celebrations and ten sports.
 
 Open `index.html` or serve this directory with a static web server. Deploy the repository root to GitHub Pages. No build step or account login is needed for visitors.
 
